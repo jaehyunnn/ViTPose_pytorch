@@ -1,11 +1,11 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import torch
 import torch.nn as nn
-from .. import constant_init, normal_init
+from vitpose.models import constant_init, normal_init
 
-from .. import pose_pck_accuracy, flip_back, resize
+from vitpose.models import pose_pck_accuracy, flip_back, resize
 import torch.nn.functional as F
-from .topdown_heatmap_base_head import TopdownHeatmapBaseHead
+from vitpose.models.head.topdown_heatmap_base_head import TopdownHeatmapBaseHead
 
 
 class TopdownHeatmapSimpleHead(TopdownHeatmapBaseHead):

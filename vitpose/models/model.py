@@ -1,7 +1,7 @@
 import torch.nn as nn
 
-from .backbone.vit import ViT
-from .head.topdown_heatmap_simple_head import TopdownHeatmapSimpleHead
+from vitpose.models.backbone.vit import ViT
+from vitpose.models.head.topdown_heatmap_simple_head import TopdownHeatmapSimpleHead
 
 
 __all__ = ['ViTPose']

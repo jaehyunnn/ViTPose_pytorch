@@ -4,7 +4,7 @@ import warnings
 import cv2
 import numpy as np
 
-from .post_processing import transform_preds
+from vitpose.utils.post_processing import transform_preds
 
 # def heatmap2coords(heatmaps: np.ndarray, original_resolution: tuple[int, int]=(256, 192)) -> np.ndarray:
 #     __, __, heatmap_h, heatmap_w = heatmaps.shape

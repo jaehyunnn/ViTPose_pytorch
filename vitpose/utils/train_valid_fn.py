@@ -3,8 +3,8 @@ import os.path as osp
 import torch
 import torch.nn as nn
 
-from models.losses import JointsMSELoss
-from models.optimizer import LayerDecayOptimizer
+from vitpose.models.losses import JointsMSELoss
+from vitpose.models.optimizer import LayerDecayOptimizer
 
 from torch.nn.parallel import DataParallel, DistributedDataParallel
 from torch.nn.utils import clip_grad_norm_
@@ -16,8 +16,8 @@ from torch.cuda.amp import autocast, GradScaler
 from tqdm import tqdm
 from time import time
 
-from utils.dist_util import get_dist_info, init_dist
-from utils.logging import get_root_logger
+from vitpose.utils.dist_util import get_dist_info, init_dist
+from vitpose.utils.logging import get_root_logger
 
 
 def train_model(model: nn.Module, datasets: Dataset, cfg: dict, distributed: bool, validate: bool,  timestamp: str, meta: dict) -> None:

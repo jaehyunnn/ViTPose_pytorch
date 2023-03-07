@@ -13,10 +13,10 @@ import torchvision.transforms.functional as F
 from tqdm import tqdm
 from PIL import Image
 
-from .HumanPoseEstimation import HumanPoseEstimationDataset as Dataset
+from vitpose.datasets.HumanPoseEstimation import HumanPoseEstimationDataset as Dataset
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
-from utils.transform import fliplr_joints, affine_transform, get_affine_transform
+from vitpose.utils.transform import fliplr_joints, affine_transform, get_affine_transform
 
 import numpy as np
 

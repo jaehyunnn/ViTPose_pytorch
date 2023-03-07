@@ -4,7 +4,7 @@ from abc import ABCMeta, abstractmethod
 import numpy as np
 import torch.nn as nn
 
-from .. import keypoints_from_heatmaps
+from vitpose.models import keypoints_from_heatmaps
 
 
 class TopdownHeatmapBaseHead(nn.Module):
