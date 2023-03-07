@@ -13,10 +13,10 @@ from time import time
 from PIL import Image
 from torchvision.transforms import transforms
 
-from models.model import ViTPose
-from utils.visualization import draw_points_and_skeleton, joints_dict
-from utils.dist_util import get_dist_info, init_dist
-from utils.top_down_eval import keypoints_from_heatmaps
+from vitpose.models.model import ViTPose
+from vitpose.utils.visualization import draw_points_and_skeleton, joints_dict
+from vitpose.utils.dist_util import get_dist_info, init_dist
+from vitpose.utils.top_down_eval import keypoints_from_heatmaps
 
 __all__ = ['inference']
             
@@ -67,8 +67,8 @@ def inference(img_path: Path, img_size: tuple[int, int],
     
 
 if __name__ == "__main__":
-    from configs.ViTPose_base_coco_256x192 import model as model_cfg
-    from configs.ViTPose_base_coco_256x192 import data_cfg
+    from vitpose.configs.ViTPose_base_coco_256x192 import model as model_cfg
+    from vitpose.configs.ViTPose_base_coco_256x192 import data_cfg
     
     parser = argparse.ArgumentParser()
     parser.add_argument('--image-path', nargs='+', type=str, default='examples/img1.jpg', help='image path(s)')
