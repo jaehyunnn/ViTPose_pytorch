@@ -23,7 +23,7 @@ import vitpose.configs.ViTPose_huge_coco_256x192 as h_cfg
 
 from vitpose.models.model import ViTPose
 from vitpose.datasets.COCO import COCODataset
-from vitpose.utils import train_model
+from vitpose.utils.train_valid_fn import train_model
 
 CUR_PATH = osp.dirname(__file__)
 
@@ -105,11 +105,12 @@ def main(config_path, model_name):
     meta['seed'] = seed
 
     # Set model
-    
     model = ViTPose(cfg.model)
-    
+    if cfg.resume_from:
+        model.load_state_dict(torch.load(cfg.resume_from)['state_dict'])
+
     # Set dataset
-    datasets = COCODataset(
+    datasets_train = COCODataset(
         root_path=cfg.data_root, 
         data_version="train_custom",
         is_train=True, 
@@ -127,9 +128,28 @@ def main(config_path, model_name):
         soft_nms=False
         )
 
+    datasets_valid = COCODataset(
+        root_path=cfg.data_root,
+        data_version="valid_custom",
+        is_train=False,
+        use_gt_bboxes=True,
+        image_width=192,
+        image_height=256,
+        scale=False,
+        scale_factor=0.35,
+        flip_prob=0.5,
+        rotate_prob=0.5,
+        rotation_factor=45.,
+        half_body_prob=0.3,
+        use_different_joints_weight=True,
+        heatmap_sigma=3,
+        soft_nms=False
+        )
+
     train_model(
         model=model,
-        datasets=datasets,
+        datasets_train=datasets_train,
+        datasets_valid=datasets_valid,
         cfg=cfg,
         distributed=distributed,
         validate=cfg.validate,
