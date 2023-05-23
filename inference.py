@@ -27,14 +27,13 @@ def inference(img_path: Path, img_size: tuple[int, int],
     
     # Prepare model
     vit_pose = ViTPose(model_cfg)
-    
    
     ckpt = torch.load(ckpt_path)
     if 'state_dict' in ckpt:
         vit_pose.load_state_dict(ckpt['state_dict'])
     else:
         vit_pose.load_state_dict(ckpt)
-    vit_pose.to(device)
+    vit_pose.to(device).eval()
     print(f">>> Model loaded: {ckpt_path}")
     
     # Prepare input data
