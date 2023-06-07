@@ -18,11 +18,13 @@ from vitpose.utils.visualization import draw_points_and_skeleton, joints_dict
 from vitpose.utils.dist_util import get_dist_info, init_dist
 from vitpose.utils.top_down_eval import keypoints_from_heatmaps
 from vitpose.utils.commons import get_support_dir, create_list_chunks
-from typing import Optional
-__all__ = ['inference']
 
+from typing import Optional
+
+__all__ = ['vitpose_inference_model']
 
 @torch.no_grad()
+
 def vitpose_inference_model(device=None,
                             verbostiy=0,
                             batch_size=32,
