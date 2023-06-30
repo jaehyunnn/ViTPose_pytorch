@@ -12,12 +12,19 @@ import torch.nn as nn
 from torch import distributed as dist
 from torch.nn.parallel import DataParallel, DistributedDataParallel
 
-from .dist_util import get_dist_info
+from vitpose.utils.dist_util import get_dist_info
+import importlib
 
 MODULE_WRAPPERS = [DataParallel, DistributedDataParallel]
 
+def import_function(module_path, function_name):
+    module_spec = importlib.util.spec_from_file_location(module_path, module_path)
+    module = importlib.util.module_from_spec(module_spec)
+    module_spec.loader.exec_module(module)
+    return getattr(module, function_name)
 
 def init_random_seed(seed=None, device='cuda'):
+
     """Initialize random seed.
 
     If the seed is not set, the seed will be automatically randomized,

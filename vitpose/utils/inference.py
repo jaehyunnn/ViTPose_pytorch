@@ -14,21 +14,29 @@ from PIL import Image
 from torchvision.transforms import transforms
 from typing import Tuple
 from vitpose.models.model import ViTPose
-from vitpose.utils.visualization import draw_points_and_skeleton, joints_dict
+
+
 from vitpose.utils.dist_util import get_dist_info, init_dist
 from vitpose.utils.top_down_eval import keypoints_from_heatmaps
 from vitpose.utils.commons import get_support_dir, create_list_chunks
 
 from typing import Optional
 
+import importlib
+
+def dynamic_import(module_name, variable_name):
+    module = importlib.import_module(module_name)
+    variable = getattr(module, variable_name)
+    return variable
+
+
 __all__ = ['vitpose_inference_model']
 
 @torch.no_grad()
-
 def vitpose_inference_model(device=None,
                             verbostiy=0,
                             batch_size=32,
-                            model_mode='large',
+                            model_spec='large-body25',
                             weights_dir:Optional[str]=None,
                             ) -> np.ndarray:
     # Prepare model
@@ -36,21 +44,28 @@ def vitpose_inference_model(device=None,
     if device is None: device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     if weights_dir is None: weights_dir = osp.join(get_support_dir(),'vitpose')
 
+    kpt_mode, model_mode = model_spec.split('-')
     assert model_mode in ['base', 'large', 'huge'], f"Unknown model mode {model_mode}"
-    if model_mode == 'base':
-        from vitpose.configs.ViTPose_base_coco_256x192 import model as model_cfg
-        from vitpose.configs.ViTPose_base_coco_256x192 import data_cfg
-        vitpose_ckpt_path = osp.join(weights_dir, "vitpose-b-multi-coco.pth")
+    assert kpt_mode in ['coco17', 'body25'], f"Unknown number of keypoints {kpt_mode}"
 
-    elif model_mode == 'large':
-        from vitpose.configs.ViTPose_large_coco_256x192 import model as model_cfg
-        from vitpose.configs.ViTPose_large_coco_256x192 import data_cfg
-        vitpose_ckpt_path = osp.join(weights_dir, "vitpose-l-multi-coco.pth")
-    elif model_mode == 'huge':
-        from vitpose.configs.ViTPose_huge_coco_256x192 import model as model_cfg
-        from vitpose.configs.ViTPose_huge_coco_256x192 import data_cfg
-        # vitpose_ckpt_path = osp.join(get_support_dir(), "vitpose", "vitpose+_huge.pth")
-        vitpose_ckpt_path = osp.join(weights_dir, "vitpose-h-multi-coco.pth")
+    model_cfg = dynamic_import(f'vitpose.configs.{kpt_mode}.ViTPose_{model_mode}_coco_256x192', 'model')
+    data_cfg = dynamic_import(f'vitpose.configs.{kpt_mode}.ViTPose_{model_mode}_coco_256x192', 'data_cfg')
+    vitpose_ckpt_path = osp.join(weights_dir, kpt_mode, f"vitpose-{model_mode}.pth")
+
+    # if model_size == 'base':
+    #     from vitpose.configs.body25.ViTPose_base_coco_256x192 import model as model_cfg
+    #     from vitpose.configs.ViTPose_base_coco_256x192 import data_cfg
+    #     vitpose_ckpt_path = osp.join(weights_dir, "vitpose-b-multi-coco.pth")
+    #
+    # elif model_size == 'large':
+    #     from vitpose.configs.ViTPose_large_coco_256x192 import model as model_cfg
+    #     from vitpose.configs.ViTPose_large_coco_256x192 import data_cfg
+    #     vitpose_ckpt_path = osp.join(weights_dir, "vitpose-l-multi-coco.pth")
+    #
+    # elif model_size == 'huge':
+    #     from vitpose.configs.ViTPose_huge_coco_256x192 import model as model_cfg
+    #     from vitpose.configs.ViTPose_huge_coco_256x192 import data_cfg
+    #     vitpose_ckpt_path = osp.join(weights_dir, "vitpose-h-multi-coco.pth")
 
     vit_pose = ViTPose(model_cfg)
 
