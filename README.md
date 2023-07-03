@@ -1,12 +1,41 @@
-# ViTPose (simple version)
-An unofficial implementation of ViTPose [Y. Xu et al., 2022] <br>
-![result_image](vitpose/examples/img1_result.jpg "Result Image")
+# ViTPose 
 
-## Usage
+An unofficial implementation of ViTPose [Y. Xu et al., 2022] <br>
 
 ### Keypoint definition
+#### Body25
+    "body25": {
+                0: "nose",
+                1: "left_eye",
+                2: "right_eye",
+                3: "left_ear",
+                4: "right_ear",
+                5: "neck",
+                6: "left_shoulder",
+                7: "right_shoulder",
+                8: "left_elbow",
+                9: "right_elbow",
+                10: "left_wrist",
+                11: "right_wrist",
+                12: "left_hip",
+                13: "right_hip",
+                14: "hip",
+                15: "left_knee",
+                16: "right_knee",
+                17: "left_ankle",
+                18: "right_ankle",
+                19: "left_big toe",
+                20: "left_small_toe",
+                21: "left_heel",
+                22: "right_big_toe",
+                23: "right_small_toe",
+                24: "right_heel",
+            }
+<img src="vitpose/support_data/body25.png" title="Body25 Keypoints" width="512"/>
+
+#### COCO17
 ```
-"coco": {
+"coco17": {
                 0: "nose",
                 1: "left_eye",
                 2: "right_eye",
@@ -26,7 +55,8 @@ An unofficial implementation of ViTPose [Y. Xu et al., 2022] <br>
                 16: "right_ankle"
             }
 ```
-<img src="vitpose/support_data/coco_keypoints.png" title="COCO17 Keypoints" width="512"/>
+<img src="vitpose/support_data/coco17.png" title="COCO17 Keypoints" width="512"/>
+
 ### | **Inference**
 ```
 python inference.py --image-path './examples/img1.jpg'
