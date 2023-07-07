@@ -6,6 +6,7 @@ opencv_python==4.6.0.66
 Pillow==9.3.0
 json_tricks
 pycocotools==2.0.2
-scipy==1.7.1
+scipy
+onnxruntime-gpu
 #torch==1.9.0+cu111
 #torchvision==0.10.0+cu111

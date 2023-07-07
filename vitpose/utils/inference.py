@@ -34,6 +34,8 @@ __all__ = ['vitpose_inference_model']
 
 @torch.no_grad()
 def vitpose_inference_model(device=None,
+                            onnx=False,
+                            half=True,
                             verbostiy=0,
                             batch_size=32,
                             model_spec='large-body25',
@@ -50,36 +52,49 @@ def vitpose_inference_model(device=None,
 
     model_cfg = dynamic_import(f'vitpose.configs.{kpt_mode}.ViTPose_{model_mode}_coco_256x192', 'model')
     data_cfg = dynamic_import(f'vitpose.configs.{kpt_mode}.ViTPose_{model_mode}_coco_256x192', 'data_cfg')
-    vitpose_ckpt_path = osp.join(weights_dir, kpt_mode, f"vitpose-{model_mode}.pth")
 
-    # if model_size == 'base':
-    #     from vitpose.configs.body25.ViTPose_base_coco_256x192 import model as model_cfg
-    #     from vitpose.configs.ViTPose_base_coco_256x192 import data_cfg
-    #     vitpose_ckpt_path = osp.join(weights_dir, "vitpose-b-multi-coco.pth")
-    #
-    # elif model_size == 'large':
-    #     from vitpose.configs.ViTPose_large_coco_256x192 import model as model_cfg
-    #     from vitpose.configs.ViTPose_large_coco_256x192 import data_cfg
-    #     vitpose_ckpt_path = osp.join(weights_dir, "vitpose-l-multi-coco.pth")
-    #
-    # elif model_size == 'huge':
-    #     from vitpose.configs.ViTPose_huge_coco_256x192 import model as model_cfg
-    #     from vitpose.configs.ViTPose_huge_coco_256x192 import data_cfg
-    #     vitpose_ckpt_path = osp.join(weights_dir, "vitpose-h-multi-coco.pth")
+    vitpose_ckpt_path = osp.join(weights_dir, kpt_mode, f"vitpose-{model_mode}.onnx")
+    if onnx and not osp.exists(vitpose_ckpt_path):
+        export_onnx(device=device, half=half, weights_dir=weights_dir, model_spec=model_spec)
+
+    if device == 'cpu':
+        half = False
 
     vit_pose = ViTPose(model_cfg)
+    if half:
+        vit_pose.half()
 
     assert osp.exists(vitpose_ckpt_path), f"ViTPose ckpt not found at {vitpose_ckpt_path}"
 
     input_size = data_cfg['image_size']
 
-    ckpt = torch.load(vitpose_ckpt_path)
-    if 'state_dict' in ckpt:
-        vit_pose.load_state_dict(ckpt['state_dict'])
+    if onnx:
+       # assert 'cuda' in device, f"ONNX Runtime only supports CUDA device, got {device}"
+        logger.info(f'Loading {vitpose_ckpt_path} for ONNX Runtime inference...')
+        import onnxruntime
+        providers = ['CUDAExecutionProvider', 'CPUExecutionProvider'] if 'cuda' in device else ['CPUExecutionProvider']
+        session = onnxruntime.InferenceSession(vitpose_ckpt_path, providers=providers)
+        output_names = [x.name for x in session.get_outputs()]
+        # meta = session.get_modelmeta().custom_metadata_map  # metadata
+        # if 'stride' in meta:
+        #     stride, names = int(meta['stride']), eval(meta['names'])
     else:
-        vit_pose.load_state_dict(ckpt)
-    vit_pose.to(device)
+        ckpt = torch.load(vitpose_ckpt_path)
+        if 'state_dict' in ckpt:
+            vit_pose.load_state_dict(ckpt['state_dict'])
+        else:
+            vit_pose.load_state_dict(ckpt)
+
+        vit_pose.eval()
+        vit_pose.to(device)
+
     logger.info(f"ViTPose model loaded from {vitpose_ckpt_path}")
+
+    def from_numpy(x):
+        return torch.from_numpy(x).to(device) if isinstance(x, np.ndarray) else x
+
+    def c2c(x):
+        return x.cpu().numpy() if isinstance(x, Tensor) else x
 
     def run_once(images):
         assert isinstance(images, list), f"Input must be a list of images, got {type(images)}"
@@ -109,13 +124,30 @@ def vitpose_inference_model(device=None,
                                          drop_smaller_batches=False)
         batch_points = []
         for ids_batch in ids_batches:
-            cur_img_tensors = torch.cat([img_tensors[i] for i in ids_batch], dim=0).to(device)
+            cur_img_tensors = torch.cat([img_tensors[i] for i in ids_batch], dim=0)
+            if half:
+                cur_img_tensors = cur_img_tensors.half()
+            cur_img_tensors = cur_img_tensors.to(device)
             cur_orig_sizes = np.array([orig_sizes[i] for i in ids_batch])
 
             # Feed to model
             tic = time()
 
-            heatmaps = vit_pose(cur_img_tensors).detach().cpu().numpy()  # N, 17, h/4, w/4
+            if onnx:
+                cur_img_tensors = cur_img_tensors.cpu().numpy()  # torch to numpy
+                heatmaps = session.run(output_names, {'input_0': cur_img_tensors})
+                # if isinstance(heatmaps, (list, tuple)):
+                #     heatmaps = from_numpy(heatmaps[0]) if len(heatmaps) == 1 else [from_numpy(x) for x in heatmaps]
+                # else:
+                #     heatmaps = from_numpy(heatmaps)
+                heatmaps = c2c(heatmaps[0]) if len(heatmaps) == 1 else np.array([c2c(x) for x in heatmaps])
+
+                # heatmaps = heatmaps.astype(np.float32)
+                # heatmaps = session.run(output_names, {session.get_inputs()[0].name: cur_img_tensors})
+            else:
+                heatmaps = vit_pose(cur_img_tensors).detach().cpu().numpy()  # N, 17, h/4, w/4
+
+            #breakpoint()
             elapsed_time = time() - tic
             if verbostiy > 0:
                 logger.info(
@@ -133,6 +165,59 @@ def vitpose_inference_model(device=None,
             return None
 
     return run_once
+
+
+def export_onnx(device=None,
+                half=False,
+                            model_spec='large-body25',
+                            weights_dir: Optional[str] = None,
+                            ) -> np.ndarray:
+    # Prepare model
+
+    if device is None: device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    if weights_dir is None: weights_dir = osp.join(get_support_dir(), 'vitpose')
+
+    kpt_mode, model_mode = model_spec.split('-')
+    assert model_mode in ['base', 'large', 'huge'], f"Unknown model mode {model_mode}"
+    assert kpt_mode in ['coco17', 'body25'], f"Unknown number of keypoints {kpt_mode}"
+
+    model_cfg = dynamic_import(f'vitpose.configs.{kpt_mode}.ViTPose_{model_mode}_coco_256x192', 'model')
+    data_cfg = dynamic_import(f'vitpose.configs.{kpt_mode}.ViTPose_{model_mode}_coco_256x192', 'data_cfg')
+
+    vitpose_ckpt_path = osp.join(weights_dir, kpt_mode, f"vitpose-{model_mode}.pth")
+    vitpose_onnx_path = vitpose_ckpt_path.replace('.pth','.onnx')
+
+    vit_pose = ViTPose(model_cfg).to(device)
+
+    assert osp.exists(vitpose_ckpt_path), f"ViTPose ckpt not found at {vitpose_ckpt_path}"
+
+    C, H, W = (3, 256, 192)
+
+    ckpt = torch.load(vitpose_ckpt_path, map_location=device)
+    if 'state_dict' in ckpt:
+        vit_pose.load_state_dict(ckpt['state_dict'])
+    else:
+        vit_pose.load_state_dict(ckpt)
+    if device == 'cpu':
+        half = False
+
+    vit_pose.eval()
+
+    input_names = ["input_0"]
+    output_names = ["output_0"]
+
+    inputs = torch.randn(1, C, H, W).to(device)
+    if half:
+        vit_pose = vit_pose.half()
+        inputs = inputs.half()
+    dynamic_axes = {'input_0' : {0 : 'batch_size'},
+                    'output_0' : {0 : 'batch_size'}}
+
+    torch_out = torch.onnx.export(vit_pose, inputs, Path(vitpose_onnx_path), export_params=True, verbose=True,
+                                  input_names=input_names, output_names=output_names,
+                                  opset_version=12, dynamic_axes = dynamic_axes)
+    logger.success(f">>> Saved at: {vitpose_onnx_path}")
+
 
 
 if __name__ == "__main__":
