@@ -53,7 +53,7 @@ def vitpose_inference_model(device=None,
     model_cfg = dynamic_import(f'vitpose.configs.{kpt_mode}.ViTPose_{model_mode}_coco_256x192', 'model')
     data_cfg = dynamic_import(f'vitpose.configs.{kpt_mode}.ViTPose_{model_mode}_coco_256x192', 'data_cfg')
 
-    vitpose_ckpt_path = osp.join(weights_dir, kpt_mode, f"vitpose-{model_mode}.onnx")
+    vitpose_ckpt_path = osp.join(weights_dir, kpt_mode, f"vitpose-{model_mode}.{'onnx' if onnx else 'pth'}")
     if onnx and not osp.exists(vitpose_ckpt_path):
         export_onnx(device=device, half=half, weights_dir=weights_dir, model_spec=model_spec)
 
@@ -145,7 +145,10 @@ def vitpose_inference_model(device=None,
                 # heatmaps = heatmaps.astype(np.float32)
                 # heatmaps = session.run(output_names, {session.get_inputs()[0].name: cur_img_tensors})
             else:
-                heatmaps = vit_pose(cur_img_tensors).detach().cpu().numpy()  # N, 17, h/4, w/4
+                heatmaps = vit_pose(cur_img_tensors)  # N, 17, h/4, w/4
+                if half:
+                    heatmaps = heatmaps.type(torch.float)
+                heatmaps = heatmaps.detach().cpu().numpy()
 
             #breakpoint()
             elapsed_time = time() - tic
@@ -169,9 +172,8 @@ def vitpose_inference_model(device=None,
 
 def export_onnx(device=None,
                 half=False,
-                            model_spec='large-body25',
-                            weights_dir: Optional[str] = None,
-                            ) -> np.ndarray:
+                model_spec='large-body25',
+                weights_dir: Optional[str] = None) -> np.ndarray:
     # Prepare model
 
     if device is None: device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -221,39 +223,43 @@ def export_onnx(device=None,
 
 
 if __name__ == "__main__":
-    # from vitpose.configs.ViTPose_base_coco_256x192 import model as model_cfg
-    # from vitpose.configs.ViTPose_base_coco_256x192 import data_cfg
-    from vitpose.configs.ViTPose_huge_coco_256x192 import model as model_cfg
-    from vitpose.configs.ViTPose_huge_coco_256x192 import data_cfg
+    export_onnx(device='cpu',
+                weights_dir='',
+                model_spec='body25-huge', half=False)
 
-    img_paths = glob('/mnt/x/data_repos/volleyball/HierVolley/player_crops/*.jpg')
-    out_dir = '/mnt/x/data_repos/volleyball/HierVolley/player_crops_vitpose'
-
-    CUR_DIR = "/mnt/x/data_repos/models/ViTPose"  # osp.dirname(__file__)
-    CKPT_PATH = f"{CUR_DIR}/vitpose-h-multi-coco.pth"
-
-    img_size = data_cfg['image_size']
-
-    kpt_model = vitpose_inference_model(input_size=img_size, model_cfg=model_cfg, ckpt_path=CKPT_PATH,
-                                        device=torch.device("cuda") if torch.cuda.is_available() else torch.device('cpu'),
-                                        out_dir=out_dir)
-
-
-    for img_path in img_paths:
-        image = cv2.imread(img_path)
-        # convert BGR to RGB
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-
-        keypoints = kpt_model(img_path=image)
-
-        for pid, point in enumerate(keypoints):
-            img = np.array(image)[:, :, ::-1]  # RGB to BGR for cv2 modules
-            img = draw_points_and_skeleton(img.copy(), point, joints_dict()['coco']['skeleton'], person_index=pid,
-                                           points_color_palette='gist_rainbow', skeleton_color_palette='jet',
-                                           points_palette_samples=10, confidence_threshold=0.4)
-            cv2.imshow('result', img)
-            cv2.waitKey(0)
-            # os.makedirs(out_dir, exist_ok=True)
-            # out_image_path = osp.join(out_dir,osp.basename(img_path))
-            # cv2.imwrite(out_image_path, img)
-            # logger.success(f"created {out_image_path}")
+    # # from vitpose.configs.ViTPose_base_coco_256x192 import model as model_cfg
+    # # from vitpose.configs.ViTPose_base_coco_256x192 import data_cfg
+    # from vitpose.configs.ViTPose_huge_coco_256x192 import model as model_cfg
+    # from vitpose.configs.ViTPose_huge_coco_256x192 import data_cfg
+    #
+    # img_paths = glob('/mnt/x/data_repos/volleyball/HierVolley/player_crops/*.jpg')
+    # out_dir = '/mnt/x/data_repos/volleyball/HierVolley/player_crops_vitpose'
+    #
+    # CUR_DIR = "/mnt/x/data_repos/models/ViTPose"  # osp.dirname(__file__)
+    # CKPT_PATH = f"{CUR_DIR}/vitpose-h-multi-coco.pth"
+    #
+    # img_size = data_cfg['image_size']
+    #
+    # kpt_model = vitpose_inference_model(input_size=img_size, model_cfg=model_cfg, ckpt_path=CKPT_PATH,
+    #                                     device=torch.device("cuda") if torch.cuda.is_available() else torch.device('cpu'),
+    #                                     out_dir=out_dir)
+    #
+    #
+    # for img_path in img_paths:
+    #     image = cv2.imread(img_path)
+    #     # convert BGR to RGB
+    #     image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+    #
+    #     keypoints = kpt_model(img_path=image)
+    #
+    #     for pid, point in enumerate(keypoints):
+    #         img = np.array(image)[:, :, ::-1]  # RGB to BGR for cv2 modules
+    #         img = draw_points_and_skeleton(img.copy(), point, joints_dict()['coco']['skeleton'], person_index=pid,
+    #                                        points_color_palette='gist_rainbow', skeleton_color_palette='jet',
+    #                                        points_palette_samples=10, confidence_threshold=0.4)
+    #         cv2.imshow('result', img)
+    #         cv2.waitKey(0)
+    #         # os.makedirs(out_dir, exist_ok=True)
+    #         # out_image_path = osp.join(out_dir,osp.basename(img_path))
+    #         # cv2.imwrite(out_image_path, img)
+    #         # logger.success(f"created {out_image_path}")
