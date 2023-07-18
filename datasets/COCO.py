@@ -249,6 +249,9 @@ class COCODataset(Dataset):
         # Load image
         try:
             image = np.array(Image.open(joints_data['imgPath']))
+            if image.ndim == 2:
+                # Some images are grayscale and will fail the trasform, convert to RGB
+                image = cv2.cvtColor(image, cv2.COLOR_GRAY2RGB)
         except:
             raise ValueError(f"Fail to read {joints_data['imgPath']}")
 
