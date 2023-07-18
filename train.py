@@ -26,6 +26,7 @@ from datasets.COCO import COCODataset
 from utils.train_valid_fn import train_model
 
 CUR_PATH = osp.dirname(__file__)
+CUR_PATH = "."
 
 @click.command()
 @click.option('--config-path', type=click.Path(exists=True), default='config.yaml', required=True, help='train config file path')
