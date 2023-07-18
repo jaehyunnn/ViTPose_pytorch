@@ -113,7 +113,8 @@ def main(config_path, model_name):
     # Set dataset
     datasets_train = COCODataset(
         root_path=cfg.data_root, 
-        data_version="train_custom",
+        #data_version="train_custom",
+        data_version="train2017",
         is_train=True, 
         use_gt_bboxes=True,
         image_width=192, 
@@ -131,7 +132,8 @@ def main(config_path, model_name):
     
     datasets_valid = COCODataset(
         root_path=cfg.data_root, 
-        data_version="valid_custom",
+        #data_version="valid_custom",
+        data_version="val2017",
         is_train=False, 
         use_gt_bboxes=True,
         image_width=192, 
