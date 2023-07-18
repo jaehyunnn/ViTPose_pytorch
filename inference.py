@@ -22,7 +22,7 @@ __all__ = ['inference']
             
             
 @torch.no_grad()
-def inference(img_path: Path, img_size: tuple[int, int],
+def inference(img_path: Path, img_size: tuple([int, int]),
               model_cfg: dict, ckpt_path: Path, device: torch.device, save_result: bool=True) -> np.ndarray:
     
     # Prepare model
