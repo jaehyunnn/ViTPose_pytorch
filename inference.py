@@ -1,5 +1,6 @@
 import argparse
 import os.path as osp
+from typing import Tuple
 
 import torch
 from torch import Tensor
@@ -22,7 +23,7 @@ __all__ = ['inference']
             
             
 @torch.no_grad()
-def inference(img_path: Path, img_size: tuple[int, int],
+def inference(img_path: Path, img_size: Tuple[int, int],
               model_cfg: dict, ckpt_path: Path, device: torch.device, save_result: bool=True) -> np.ndarray:
     
     # Prepare model
