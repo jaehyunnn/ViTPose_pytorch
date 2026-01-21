@@ -224,7 +224,7 @@ def resize(input,
                         f'out size {(output_h, output_w)} is `nx+1`')
     if isinstance(size, torch.Size):
         size = tuple(int(x) for x in size)
-        
+    return torch.nn.functional.interpolate(input, size, scale_factor, mode, align_corners)
 def constant_init(module: nn.Module, val: float, bias: float = 0) -> None:
     if hasattr(module, 'weight') and module.weight is not None:
         nn.init.constant_(module.weight, val)
