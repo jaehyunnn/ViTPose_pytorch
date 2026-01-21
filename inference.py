@@ -44,10 +44,11 @@ def inference(img_path: Path, img_size: Tuple[int, int],
     print(f">>> Original image size: {org_h} X {org_w} (height X width)")
     print(f">>> Resized image size: {img_size[1]} X {img_size[0]} (height X width)")
     print(f">>> Scale change: {org_h/img_size[1]}, {org_w/img_size[0]}")
-    img_tensor = transforms.Compose (
-        [transforms.Resize((img_size[1], img_size[0])),
-         transforms.ToTensor()]
-    )(img).unsqueeze(0).to(device)
+    img_tensor = transforms.Compose([
+        transforms.Resize((img_size[1], img_size[0])),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+    ])(img).unsqueeze(0).to(device)
     
     
     # Feed to model
@@ -83,8 +84,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
     
     CUR_DIR = osp.dirname(__file__)
-    # CKPT_PATH = f"{CUR_DIR}/vitpose-b-multi-coco.pth"
-    CKPT_PATH = "/home/jaehyun/workspace/PoseEstimation/ViTPose_pytorch/runs/train/002/epoch010.pth"
+    CKPT_PATH = f"{CUR_DIR}/vitpose-b-multi-coco.pth"
     
     img_size = data_cfg['image_size']
     if type(args.image_path) != list:
